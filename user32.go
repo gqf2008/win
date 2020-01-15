@@ -1799,6 +1799,7 @@ var (
 	getCursorPos                *windows.LazyProc
 	getDC                       *windows.LazyProc
 	getDesktopWindow            *windows.LazyProc
+	getShellWindow              *windows.LazyProc
 	getDlgItem                  *windows.LazyProc
 	getDpiForWindow             *windows.LazyProc
 	getFocus                    *windows.LazyProc
@@ -1939,6 +1940,7 @@ func init() {
 	getCursorPos = libuser32.NewProc("GetCursorPos")
 	getDC = libuser32.NewProc("GetDC")
 	getDesktopWindow = libuser32.NewProc("GetDesktopWindow")
+	getShellWindow = libuser32.NewProc("GetShellWindow")
 	getDlgItem = libuser32.NewProc("GetDlgItem")
 	getDpiForWindow = libuser32.NewProc("GetDpiForWindow")
 	getFocus = libuser32.NewProc("GetFocus")
@@ -2474,6 +2476,15 @@ func GetCursorPos(lpPoint *POINT) bool {
 
 func GetDesktopWindow() HWND {
 	ret, _, _ := syscall.Syscall(getDesktopWindow.Addr(), 0,
+		0,
+		0,
+		0)
+
+	return HWND(ret)
+}
+
+func GetShellWindow() HWND {
+	ret, _, _ := syscall.Syscall(getShellWindow.Addr(), 0,
 		0,
 		0,
 		0)
