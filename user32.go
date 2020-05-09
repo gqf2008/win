@@ -3398,9 +3398,8 @@ func EnumDisplayMonitors(hdc HDC, lprcClip *RECT, lpfnEnum MONITORENUMPROC, dwDa
 
 const ENUM_CURRENT_SETTINGS = 0xFFFFFFFF
 
-func EnumDisplaySettings(devName uintptr, devMode DEVMODE) bool {
-	devMode.DmSize = uint16(unsafe.Sizeof(devMode))
-	if ret, _, _ := syscall.Syscall(enumDisplaySettings.Addr(), 3, devName, ENUM_CURRENT_SETTINGS, uintptr(unsafe.Pointer(&devMode))); ret == 0 {
+func EnumDisplaySettings(devName uintptr, devMode *DEVMODE) bool {
+	if ret, _, _ := syscall.Syscall(enumDisplaySettings.Addr(), 3, devName, ENUM_CURRENT_SETTINGS, uintptr(unsafe.Pointer(devMode))); ret == 0 {
 		return false
 	}
 	return true
