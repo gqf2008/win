@@ -1467,6 +1467,10 @@ type MONITORINFO struct {
 	RcWork    RECT
 	DwFlags   uint32
 }
+type MONITORINFOEX struct {
+	MONITORINFO
+	DeviceName [CCHDEVICENAME]uint16
+}
 
 type (
 	HACCEL    HANDLE
@@ -1887,6 +1891,8 @@ var (
 	updateWindow                *windows.LazyProc
 	windowFromDC                *windows.LazyProc
 	windowFromPoint             *windows.LazyProc
+	enumDisplayMonitors         *windows.LazyProc
+	enumDisplaySettings         *windows.LazyProc
 )
 
 func init() {
@@ -2038,6 +2044,8 @@ func init() {
 	updateWindow = libuser32.NewProc("UpdateWindow")
 	windowFromDC = libuser32.NewProc("WindowFromDC")
 	windowFromPoint = libuser32.NewProc("WindowFromPoint")
+	enumDisplayMonitors = libuser32.NewProc("EnumDisplayMonitors")
+	enumDisplaySettings = libuser32.NewProc("EnumDisplaySettingsW")
 }
 
 func AddClipboardFormatListener(hwnd HWND) bool {
@@ -2589,6 +2597,13 @@ func GetMonitorInfo(hMonitor HMONITOR, lpmi *MONITORINFO) bool {
 		uintptr(unsafe.Pointer(lpmi)),
 		0)
 
+	return ret != 0
+}
+func GetMonitorInfoEx(hMonitor HMONITOR, lpmi *MONITORINFOEX) bool {
+	ret, _, _ := syscall.Syscall(getMonitorInfo.Addr(), 2,
+		uintptr(hMonitor),
+		uintptr(unsafe.Pointer(lpmi)),
+		0)
 	return ret != 0
 }
 
@@ -3361,4 +3376,25 @@ func WindowFromPoint(Point POINT) HWND {
 		0)
 
 	return HWND(ret)
+}
+
+func EnumDisplayMonitors(hdc HDC, lprcClip *RECT, lpfnEnum uintptr, dwData uintptr) bool {
+	ret, _, _ := syscall.Syscall6(enumDisplayMonitors.Addr(), 4,
+		uintptr(hdc),
+		uintptr(unsafe.Pointer(lprcClip)),
+		lpfnEnum,
+		dwData,
+		0,
+		0)
+	return int(ret) != 0
+}
+
+const ENUM_CURRENT_SETTINGS = 0xFFFFFFFF
+
+func EnumDisplaySettings(devName uintptr, devMode DEVMODE) bool {
+	devMode.DmSize = uint16(unsafe.Sizeof(devMode))
+	if ret, _, _ := syscall.Syscall(enumDisplaySettings.Addr(), 3, devName, ENUM_CURRENT_SETTINGS, uintptr(unsafe.Pointer(&devMode))); ret == 0 {
+		return false
+	}
+	return true
 }
