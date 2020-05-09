@@ -3378,11 +3378,18 @@ func WindowFromPoint(Point POINT) HWND {
 	return HWND(ret)
 }
 
-func EnumDisplayMonitors(hdc HDC, lprcClip *RECT, lpfnEnum uintptr, dwData uintptr) bool {
+type GetMonitorBoundsContext struct {
+	Index int
+	Rect  RECT
+	Count int
+}
+type MONITORENUMPROC = func(hMonitor HMONITOR, hdcMonitor HDC, lprcMonitor *RECT, dwData uintptr) uintptr
+
+func EnumDisplayMonitors(hdc HDC, lprcClip *RECT, lpfnEnum MONITORENUMPROC, dwData uintptr) bool {
 	ret, _, _ := syscall.Syscall6(enumDisplayMonitors.Addr(), 4,
 		uintptr(hdc),
 		uintptr(unsafe.Pointer(lprcClip)),
-		lpfnEnum,
+		syscall.NewCallback(lpfnEnum),
 		dwData,
 		0,
 		0)
