@@ -848,16 +848,17 @@ type TEXTMETRIC struct {
 }
 
 type DEVMODE struct {
-	DmDeviceName       [CCHDEVICENAME]uint16
-	DmSpecVersion      uint16
-	DmDriverVersion    uint16
-	DmSize             uint16
-	DmDriverExtra      uint16
-	DmFields           uint32
-	DmOrientation      int16
-	DmPaperSize        int16
-	DmPaperLength      int16
-	DmPaperWidth       int16
+	DmDeviceName    [CCHDEVICENAME]uint16
+	DmSpecVersion   uint16
+	DmDriverVersion uint16
+	DmSize          uint16
+	DmDriverExtra   uint16
+	DmFields        uint32
+	DmPosition      POINT
+	// DmOrientation      int16
+	// DmPaperSize        int16
+	// DmPaperLength      int16
+	// DmPaperWidth       int16
 	DmScale            int16
 	DmCopies           int16
 	DmDefaultSource    int16

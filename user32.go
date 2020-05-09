@@ -3409,7 +3409,7 @@ type DISPLAY_DEVMODE struct {
 	_            [40]byte
 }
 
-func EnumDisplaySettings(devName uintptr, devMode *DISPLAY_DEVMODE) bool {
+func EnumDisplaySettings(devName uintptr, devMode *DEVMODE) bool {
 	if ret, _, _ := syscall.Syscall(enumDisplaySettings.Addr(), 3, devName, ENUM_CURRENT_SETTINGS, uintptr(unsafe.Pointer(devMode))); ret == 0 {
 		return false
 	}
