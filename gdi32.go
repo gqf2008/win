@@ -847,6 +847,32 @@ type TEXTMETRIC struct {
 	TmCharSet          byte
 }
 
+type DUMMYUNIONNAME struct {
+	DmOrientation   int16
+	DmPaperSize     int16
+	DmPaperLength   int16
+	DmPaperWidth    int16
+	DmScale         int16
+	DmCopies        int16
+	DmDefaultSource int16
+	DmPrintQuality  int16
+}
+
+func (d DUMMYUNIONNAME) DmPosition() POINT {
+	return POINT{
+		X: int32(d.DmOrientation)<<16 | int32(d.DmPaperSize),
+		Y: int32(d.DmPaperLength)<<16 | int32(d.DmPaperWidth),
+	}
+}
+
+func (d DUMMYUNIONNAME) DmDisplayOrientation() uint32 {
+	return uint32(d.DmScale)<<16 | uint32(d.DmCopies)
+}
+
+func (d DUMMYUNIONNAME) DmDisplayFixedOutput() uint32 {
+	return uint32(d.DmDefaultSource)<<16 | uint32(d.DmPrintQuality)
+}
+
 type DEVMODE struct {
 	DmDeviceName    [CCHDEVICENAME]uint16
 	DmSpecVersion   uint16
@@ -854,15 +880,7 @@ type DEVMODE struct {
 	DmSize          uint16
 	DmDriverExtra   uint16
 	DmFields        uint32
-	DmPosition      POINT
-	// DmOrientation      int16
-	// DmPaperSize        int16
-	// DmPaperLength      int16
-	// DmPaperWidth       int16
-	DmScale            int16
-	DmCopies           int16
-	DmDefaultSource    int16
-	DmPrintQuality     int16
+	DUMMYUNIONNAME
 	DmColor            int16
 	DmDuplex           int16
 	DmYResolution      int16
@@ -954,6 +972,11 @@ type BITMAPV5HEADER struct {
 	BV5Reserved    uint32
 }
 
+type RGB struct {
+	R byte
+	G byte
+	B byte
+}
 type RGBQUAD struct {
 	RgbBlue     byte
 	RgbGreen    byte
@@ -1067,6 +1090,7 @@ var (
 	endPage                 *windows.LazyProc
 	excludeClipRect         *windows.LazyProc
 	extCreatePen            *windows.LazyProc
+	createPen               *windows.LazyProc
 	fillRgn                 *windows.LazyProc
 	gdiFlush                *windows.LazyProc
 	getBkColor              *windows.LazyProc
@@ -1112,6 +1136,7 @@ var (
 	swapBuffers             *windows.LazyProc
 	textOut                 *windows.LazyProc
 	transparentBlt          *windows.LazyProc
+	setDCBrushColor         *windows.LazyProc
 )
 
 func init() {
@@ -1146,6 +1171,7 @@ func init() {
 	endDoc = libgdi32.NewProc("EndDoc")
 	endPage = libgdi32.NewProc("EndPage")
 	excludeClipRect = libgdi32.NewProc("ExcludeClipRect")
+	createPen = libgdi32.NewProc("CreatePen")
 	extCreatePen = libgdi32.NewProc("ExtCreatePen")
 	fillRgn = libgdi32.NewProc("FillRgn")
 	gdiFlush = libgdi32.NewProc("GdiFlush")
@@ -1190,10 +1216,12 @@ func init() {
 	stretchBlt = libgdi32.NewProc("StretchBlt")
 	swapBuffers = libgdi32.NewProc("SwapBuffers")
 	textOut = libgdi32.NewProc("TextOutW")
+	setDCBrushColor = libgdi32.NewProc("SetDCBrushColor")
 
 	alphaBlend = libmsimg32.NewProc("AlphaBlend")
 	gradientFill = libmsimg32.NewProc("GradientFill")
 	transparentBlt = libmsimg32.NewProc("TransparentBlt")
+
 }
 
 func AbortDoc(hdc HDC) int32 {
@@ -1484,6 +1512,14 @@ func ExcludeClipRect(hdc HDC, nLeftRect, nTopRect, nRightRect, nBottomRect int32
 	return int32(ret)
 }
 
+func CreatePen(dwPenStyle, dwWidth uint32, rgb COLORREF) HPEN {
+	ret, _, _ := syscall.Syscall(createPen.Addr(), 3,
+		uintptr(dwPenStyle),
+		uintptr(dwWidth),
+		uintptr(rgb))
+	return HPEN(ret)
+}
+
 func ExtCreatePen(dwPenStyle, dwWidth uint32, lplb *LOGBRUSH, dwStyleCount uint32, lpStyle *uint32) HPEN {
 	ret, _, _ := syscall.Syscall6(extCreatePen.Addr(), 5,
 		uintptr(dwPenStyle),
@@ -1494,6 +1530,15 @@ func ExtCreatePen(dwPenStyle, dwWidth uint32, lplb *LOGBRUSH, dwStyleCount uint3
 		0)
 
 	return HPEN(ret)
+}
+
+func SetDCBrushColor(hdc HDC, rgb COLORREF) COLORREF {
+	ret, _, _ := syscall.Syscall(setDCBrushColor.Addr(), 2,
+		uintptr(hdc),
+		uintptr(rgb),
+		0)
+
+	return COLORREF(ret)
 }
 
 func FillRgn(hdc HDC, hrgn HRGN, hbr HBRUSH) bool {
@@ -1596,7 +1641,6 @@ func GetStockObject(fnObject int32) HGDIOBJ {
 		uintptr(fnObject),
 		0,
 		0)
-
 	return HGDIOBJ(ret)
 }
 
